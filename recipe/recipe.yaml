@@ -4,9 +4,14 @@ context:
   name: lwt
   version: "6.1.2"
 
+  build_number: 1
+
   library: ${{ "Library/" if not unix else "" }}
   m2: ${{ "m2-" if not unix else "" }}
-  c_toolchain: ${{ "" if unix else "gcc_*" }}
+  # ocaml_win-64 ships gcc_* and vs_* at the same version/build; name the track.
+  c_toolchain: ${{ "" if unix else c_compiler ~ "_*" }}
+  # static archive paired with the .cmxa: msvc ships .lib, gcc and unix ship .a
+  native_lib_ext: ${{ ".lib" if c_compiler == "vs" else ".a" }}
 
 recipe:
   name: ocaml-${{ name }}-split
@@ -17,26 +22,49 @@ source:
   sha256: 8d17156f4a5de94560a7f9edd444bee58f7eb447270b2a2d3e4483d819c6b0ab
 
 build:
-  number: 0
+  number: ${{ build_number }}
 
 outputs:
   - package:
       name: ocaml-${{ name }}
       version: ${{ version }}
     build:
+      string: ${{ c_compiler ~ "_" if not unix }}h${{ hash }}_${{ build_number }}
       script: bash ${{ RECIPE_DIR }}/build.sh lwt
     requirements:
       build:
+        - ${{ compiler("ocaml") }}
+        - if: not unix and c_compiler == "gcc"
+          then:
+            - ${{ stdlib("m2w64_c") }}
+          else:
+            - ${{ stdlib("c") }}
+        # lwt_unix has C stubs: a C compiler on every lane
         - if: unix
           then:
             - ${{ compiler("c") }}
-            - ${{ stdlib("c") }}
-          else:
+        - if: not unix and c_compiler == "gcc"
+          then:
             - ${{ compiler("m2w64_c") }}
-            - ${{ stdlib("m2w64_c") }}
-        # non-unix: conda-forge ocaml has gcc_ and vs2022_ tracks; these recipes use the gcc (MinGW) track only.
-        - ocaml ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
-        - ocaml-dune 3.24.*
+        # ocaml_win-64 >=14 only run-constrains the C compiler; activate it here, once (vs, zig)
+        - if: not unix and c_compiler != "gcc"
+          then:
+            - ${{ compiler("zig") if c_compiler == "zig" else compiler("c") }}
+        # compiler("ocaml") renders no toolchain track; name it on windows
+        - if: not unix
+          then:
+            - ocaml_${{ target_platform }} ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
+        # the cross compiler does not pull the native one; the build runs OCaml on the build machine
+        - if: build_platform != target_platform and unix
+          then:
+            - ocaml_${{ build_platform }} ${{ ocaml_compiler_version }}.*
+            # the cross compiler activates itself (shims, OCAMLLIB, host OCAMLPATH)
+            - ocaml_${{ target_platform }} ${{ ocaml_compiler_version }}.*
+        # windows cross: the self-contained gcc track needs no vcvars
+        - if: build_platform != target_platform and not unix
+          then:
+            - ocaml_${{ build_platform }} ${{ ocaml_compiler_version }}.* gcc_*
+        - ocaml-dune >=3.4
         - ocaml-cppo >=1.1
         - ${{ m2 }}make
         - if: not unix
@@ -44,29 +72,47 @@ outputs:
             - m2-bash
             - m2-coreutils
       host:
-        - ocaml ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
+        # library: ocaml's run_export pins the compiler patch version
+        - ocaml ${{ ocaml_compiler_version }}.*
+        # the noarch ocaml metapackage does not pin the windows toolchain track
+        - if: not unix
+          then:
+            - ocaml_${{ target_platform }} ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
         - ocaml-dune-configurator
         - ocaml-ocplib-endian
       run:
-        - ocaml ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
         - ocaml-ocplib-endian
+      # the ocaml run_export does not encode the windows toolchain track
+      run_constraints:
+        - if: not unix
+          then:
+            - ocaml_${{ target_platform }} ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
     tests:
       - package_contents:
           files:
             - ${{ library }}lib/ocaml/lwt/META
-            - ${{ library }}lib/ocaml/lwt/lwt.cmxa
-            - ${{ library }}lib/ocaml/lwt/unix/lwt_unix.cmxa
+            - if: target_platform != "win-arm64"
+              then:
+                - ${{ library }}lib/ocaml/lwt/lwt.cmxa
+                - ${{ library }}lib/ocaml/lwt/lwt${{ native_lib_ext }}
+                - ${{ library }}lib/ocaml/lwt/unix/lwt_unix.cmxa
       - script: bash testing/test_lwt.sh
         files:
           recipe:
             - testing/test_lwt.sh
         requirements:
           run:
-            - ocaml ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
-            - ocaml-dune 3.24.*
+            - ocaml ${{ ocaml_compiler_version }}.*
+            - if: not unix
+              then:
+                - ocaml_${{ target_platform }} ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
+            - ocaml-dune >=3.4
             - if: unix
               then:
                 - ${{ compiler("c") }}
+            - if: not unix and c_compiler != "gcc"
+              then:
+                - ${{ compiler("zig") if c_compiler == "zig" else compiler("c") }}
             - if: not unix
               then:
                 - m2-bash
@@ -82,19 +128,39 @@ outputs:
       name: ocaml-${{ name }}-ppx
       version: ${{ version }}
     build:
+      string: ${{ c_compiler ~ "_" if not unix }}h${{ hash }}_${{ build_number }}
       script: bash ${{ RECIPE_DIR }}/build.sh lwt_ppx
     requirements:
       build:
-        - if: unix
+        - ${{ compiler("ocaml") }}
+        - if: not unix and c_compiler == "gcc"
           then:
-            - ${{ compiler("c") }}
-            - ${{ stdlib("c") }}
-          else:
-            - ${{ compiler("m2w64_c") }}
             - ${{ stdlib("m2w64_c") }}
-        # non-unix: conda-forge ocaml has gcc_ and vs2022_ tracks; these recipes use the gcc (MinGW) track only.
-        - ocaml ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
-        - ocaml-dune 3.24.*
+          else:
+            - ${{ stdlib("c") }}
+        # no C stubs; ocamlopt still links through the C compiler on windows
+        - if: not unix and c_compiler == "gcc"
+          then:
+            - ${{ compiler("m2w64_c") }}
+        # ocaml_win-64 >=14 only run-constrains the C compiler; activate it here, once (vs, zig)
+        - if: not unix and c_compiler != "gcc"
+          then:
+            - ${{ compiler("zig") if c_compiler == "zig" else compiler("c") }}
+        # compiler("ocaml") renders no toolchain track; name it on windows
+        - if: not unix
+          then:
+            - ocaml_${{ target_platform }} ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
+        # the cross compiler does not pull the native one; the build runs OCaml on the build machine
+        - if: build_platform != target_platform and unix
+          then:
+            - ocaml_${{ build_platform }} ${{ ocaml_compiler_version }}.*
+            # the cross compiler activates itself (shims, OCAMLLIB, host OCAMLPATH)
+            - ocaml_${{ target_platform }} ${{ ocaml_compiler_version }}.*
+        # windows cross: the self-contained gcc track needs no vcvars
+        - if: build_platform != target_platform and not unix
+          then:
+            - ocaml_${{ build_platform }} ${{ ocaml_compiler_version }}.* gcc_*
+        - ocaml-dune >=3.4
         - ocaml-cppo >=1.1
         - ${{ m2 }}make
         - if: not unix
@@ -102,18 +168,29 @@ outputs:
             - m2-bash
             - m2-coreutils
       host:
-        - ocaml ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
+        # library: ocaml's run_export pins the compiler patch version
+        - ocaml ${{ ocaml_compiler_version }}.*
+        # the noarch ocaml metapackage does not pin the windows toolchain track
+        - if: not unix
+          then:
+            - ocaml_${{ target_platform }} ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
         - ocaml-ppxlib >=0.36
         - ${{ pin_subpackage('ocaml-lwt', exact=True) }}
       run:
-        - ocaml ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
         - ocaml-ppxlib >=0.36
         - ${{ pin_subpackage('ocaml-lwt', exact=True) }}
+      # the ocaml run_export does not encode the windows toolchain track
+      run_constraints:
+        - if: not unix
+          then:
+            - ocaml_${{ target_platform }} ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
     tests:
       - package_contents:
           files:
             - ${{ library }}lib/ocaml/lwt_ppx/META
-            - ${{ library }}lib/ocaml/lwt_ppx/lwt_ppx.cmxa
+            - if: target_platform != "win-arm64"
+              then:
+                - ${{ library }}lib/ocaml/lwt_ppx/lwt_ppx.cmxa
     about:
       homepage: https://github.com/ocsigen/lwt
       repository: https://github.com/ocsigen/lwt
