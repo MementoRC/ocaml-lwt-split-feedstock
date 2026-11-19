@@ -42,6 +42,7 @@ outputs:
         - if: not unix
           then:
             - m2-bash
+            - m2-coreutils
       host:
         - ocaml ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
         - ocaml-dune-configurator
@@ -69,6 +70,7 @@ outputs:
             - if: not unix
               then:
                 - m2-bash
+                - m2-coreutils
     about:
       homepage: https://github.com/ocsigen/lwt
       repository: https://github.com/ocsigen/lwt
@@ -98,6 +100,7 @@ outputs:
         - if: not unix
           then:
             - m2-bash
+            - m2-coreutils
       host:
         - ocaml ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
         - ocaml-ppxlib >=0.36
