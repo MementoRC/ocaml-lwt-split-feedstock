@@ -2,7 +2,7 @@ schema_version: 1
 
 context:
   name: lwt
-  version: "6.1.2"
+  version: "6.1.3"
 
   library: ${{ "Library/" if not unix else "" }}
   m2: ${{ "m2-" if not unix else "" }}
@@ -14,7 +14,7 @@ recipe:
 
 source:
   url: https://github.com/ocsigen/lwt/archive/refs/tags/${{ version }}.tar.gz
-  sha256: 8d17156f4a5de94560a7f9edd444bee58f7eb447270b2a2d3e4483d819c6b0ab
+  sha256: e558fdac4c65c925d61d6b96708629cad3f29e6a76fef814c031c223ba39cd09
 
 build:
   number: 0
