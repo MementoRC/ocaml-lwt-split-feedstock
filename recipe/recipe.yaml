@@ -18,8 +18,12 @@ recipe:
   version: ${{ version }}
 
 source:
-  url: https://github.com/ocsigen/lwt/archive/refs/tags/${{ version }}.tar.gz
-  sha256: 6bc311d7e8aa6a16243ec6c77f9c60a1f17950bc754f2ea3d60e18ff31c155e2
+  - url: https://github.com/ocsigen/lwt/archive/refs/tags/${{ version }}.tar.gz
+    sha256: 6bc311d7e8aa6a16243ec6c77f9c60a1f17950bc754f2ea3d60e18ff31c155e2
+  # vendored until ppx_devtools-optcomp is on conda-forge; lwt 6.1.3 lwt.unix needs it at build time
+  - url: https://github.com/ocsigen/ppx_devtools/releases/download/0.1/ppx_devtools-0.1.tbz
+    sha256: 46ad4e62a213e3c0852c02cd1cc182d88ec89afa284a45a4316cfb3ffc0bcb9c
+    target_directory: vendor/ppx_devtools
 
 build:
   number: ${{ build_number }}
@@ -64,7 +68,7 @@ outputs:
         - if: build_platform != target_platform and not unix
           then:
             - ocaml_${{ build_platform }} ${{ ocaml_compiler_version }}.* gcc_*
-        - ocaml-dune >=3.4
+        - ocaml-dune >=3.20
         - ocaml-cppo >=1.1
         - ${{ m2 }}make
         - if: not unix
@@ -79,6 +83,7 @@ outputs:
           then:
             - ocaml_${{ target_platform }} ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
         - ocaml-dune-configurator
+        - ocaml-ppxlib >=0.33
         - ocaml-ocplib-endian
       run:
         - ocaml-ocplib-endian
@@ -109,7 +114,7 @@ outputs:
               - if: not unix
                 then:
                   - ocaml_${{ target_platform }} ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
-              - ocaml-dune >=3.4
+              - ocaml-dune >=3.20
               - if: unix
                 then:
                   - ${{ compiler("c") }}
