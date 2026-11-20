@@ -40,9 +40,13 @@ outputs:
           else:
             - ${{ stdlib("c") }}
         # lwt_unix has C stubs: a C compiler on every lane
-        - if: unix
+        - if: unix and target_platform != "linux-s390x"
           then:
             - ${{ compiler("c") }}
+        # no gcc s390x cross for the pinned version; zig cross-compiles the stubs
+        - if: target_platform == "linux-s390x"
+          then:
+            - ${{ compiler("zig") }}
         - if: not unix and c_compiler == "gcc"
           then:
             - ${{ compiler("m2w64_c") }}
@@ -96,27 +100,33 @@ outputs:
                 - ${{ library }}lib/ocaml/lwt/lwt.cmxa
                 - ${{ library }}lib/ocaml/lwt/lwt${{ native_lib_ext }}
                 - ${{ library }}lib/ocaml/lwt/unix/lwt_unix.cmxa
-      - script: bash testing/test_lwt.sh
-        files:
-          recipe:
-            - testing/test_lwt.sh
-        requirements:
-          run:
-            - ocaml ${{ ocaml_compiler_version }}.*
-            - if: not unix
-              then:
-                - ocaml_${{ target_platform }} ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
-            - ocaml-dune >=3.4
-            - if: unix
-              then:
-                - ${{ compiler("c") }}
-            - if: not unix and c_compiler != "gcc"
-              then:
-                - ${{ compiler("c") }}
-            - if: not unix
-              then:
-                - m2-bash
-                - m2-coreutils
+      # script test links native executables; win-arm64 is bytecode-only
+      - if: target_platform != "win-arm64"
+        then:
+          script: bash testing/test_lwt.sh
+          files:
+            recipe:
+              - testing/test_lwt.sh
+          requirements:
+            run:
+              - ocaml ${{ ocaml_compiler_version }}.*
+              - if: not unix
+                then:
+                  - ocaml_${{ target_platform }} ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
+              - ocaml-dune >=3.4
+              - if: unix and target_platform != "linux-s390x"
+                then:
+                  - ${{ compiler("c") }}
+              - if: target_platform == "linux-s390x"
+                then:
+                  - ${{ compiler("zig") }}
+              - if: not unix and c_compiler != "gcc"
+                then:
+                  - ${{ compiler("c") }}
+              - if: not unix
+                then:
+                  - m2-bash
+                  - m2-coreutils
     about:
       homepage: https://github.com/ocsigen/lwt
       repository: https://github.com/ocsigen/lwt
