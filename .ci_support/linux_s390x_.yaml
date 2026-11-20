@@ -2,6 +2,8 @@ DOCKER_PLATFORM:
 - linux/amd64
 c_compiler:
 - gcc
+c_compiler_version:
+- '14'
 c_stdlib:
 - sysroot
 c_stdlib_version:
@@ -18,7 +20,3 @@ ocaml_compiler_version:
 - 5.5.1
 target_platform:
 - linux-s390x
-zig_compiler:
-- zig
-zig_compiler_version:
-- 0.17.0
