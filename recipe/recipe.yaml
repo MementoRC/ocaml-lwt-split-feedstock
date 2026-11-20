@@ -19,7 +19,7 @@ recipe:
 
 source:
   url: https://github.com/ocsigen/lwt/archive/refs/tags/${{ version }}.tar.gz
-  sha256: e558fdac4c65c925d61d6b96708629cad3f29e6a76fef814c031c223ba39cd09
+  sha256: 6bc311d7e8aa6a16243ec6c77f9c60a1f17950bc754f2ea3d60e18ff31c155e2
 
 build:
   number: ${{ build_number }}
