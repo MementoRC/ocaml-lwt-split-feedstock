@@ -8,10 +8,10 @@ context:
 
   library: ${{ "Library/" if not unix else "" }}
   m2: ${{ "m2-" if not unix else "" }}
-  # ocaml_win-64 ships gcc_* and vs_* at the same version/build; name the track.
+  # ocaml_win-64 ships gcc_* and vs2022_* at the same version/build; name the track.
   c_toolchain: ${{ "" if unix else c_compiler ~ "_*" }}
   # static archive paired with the .cmxa: msvc ships .lib, gcc and unix ship .a
-  native_lib_ext: ${{ ".lib" if c_compiler == "vs" else ".a" }}
+  native_lib_ext: ${{ ".lib" if c_compiler == "vs2022" else ".a" }}
 
 recipe:
   name: ocaml-${{ name }}-split
@@ -46,10 +46,10 @@ outputs:
         - if: not unix and c_compiler == "gcc"
           then:
             - ${{ compiler("m2w64_c") }}
-        # ocaml_win-64 >=14 only run-constrains the C compiler; activate it here, once (vs, zig)
+        # ocaml_win-64 >=14 only run-constrains the C compiler; activate it here, once (vs2022, zig)
         - if: not unix and c_compiler != "gcc"
           then:
-            - ${{ compiler("zig") if c_compiler == "zig" else compiler("c") }}
+            - ${{ compiler("c") }}
         # compiler("ocaml") renders no toolchain track; name it on windows
         - if: not unix
           then:
@@ -112,7 +112,7 @@ outputs:
                 - ${{ compiler("c") }}
             - if: not unix and c_compiler != "gcc"
               then:
-                - ${{ compiler("zig") if c_compiler == "zig" else compiler("c") }}
+                - ${{ compiler("c") }}
             - if: not unix
               then:
                 - m2-bash
@@ -142,10 +142,10 @@ outputs:
         - if: not unix and c_compiler == "gcc"
           then:
             - ${{ compiler("m2w64_c") }}
-        # ocaml_win-64 >=14 only run-constrains the C compiler; activate it here, once (vs, zig)
+        # ocaml_win-64 >=14 only run-constrains the C compiler; activate it here, once (vs2022, zig)
         - if: not unix and c_compiler != "gcc"
           then:
-            - ${{ compiler("zig") if c_compiler == "zig" else compiler("c") }}
+            - ${{ compiler("c") }}
         # compiler("ocaml") renders no toolchain track; name it on windows
         - if: not unix
           then:
