@@ -40,13 +40,9 @@ outputs:
           else:
             - ${{ stdlib("c") }}
         # lwt_unix has C stubs: a C compiler on every lane
-        - if: unix and target_platform != "linux-s390x"
+        - if: unix
           then:
             - ${{ compiler("c") }}
-        # no gcc s390x cross for the pinned version; zig cross-compiles the stubs
-        - if: target_platform == "linux-s390x"
-          then:
-            - ${{ compiler("zig") }}
         - if: not unix and c_compiler == "gcc"
           then:
             - ${{ compiler("m2w64_c") }}
@@ -114,12 +110,9 @@ outputs:
                 then:
                   - ocaml_${{ target_platform }} ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
               - ocaml-dune >=3.4
-              - if: unix and target_platform != "linux-s390x"
+              - if: unix
                 then:
                   - ${{ compiler("c") }}
-              - if: target_platform == "linux-s390x"
-                then:
-                  - ${{ compiler("zig") }}
               - if: not unix and c_compiler != "gcc"
                 then:
                   - ${{ compiler("c") }}
