@@ -4,7 +4,7 @@ context:
   name: lwt
   version: "6.1.3"
 
-  build_number: 1
+  build_number: 2
 
   library: ${{ "Library/" if not unix else "" }}
   m2: ${{ "m2-" if not unix else "" }}
@@ -82,6 +82,7 @@ outputs:
         - if: not unix
           then:
             - ocaml_${{ target_platform }} ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
+        - ocaml-dune >=3.20
         - ocaml-dune-configurator
         - ocaml-ppxlib >=0.33
         - ocaml-ocplib-endian
@@ -92,6 +93,8 @@ outputs:
         - if: not unix
           then:
             - ocaml_${{ target_platform }} ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
+        # installed dune-package declares (lang dune X.Y); older dune cannot read it
+        - ${{ pin_compatible('ocaml-dune', lower_bound='x.x', upper_bound=None) }}
     tests:
       - package_contents:
           files:
@@ -182,6 +185,7 @@ outputs:
         - if: not unix
           then:
             - ocaml_${{ target_platform }} ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
+        - ocaml-dune >=3.4
         - ocaml-ppxlib >=0.36
         - ${{ pin_subpackage('ocaml-lwt', exact=True) }}
       run:
@@ -192,6 +196,8 @@ outputs:
         - if: not unix
           then:
             - ocaml_${{ target_platform }} ${{ ocaml_compiler_version }}.* ${{ c_toolchain }}
+        # installed dune-package declares (lang dune X.Y); older dune cannot read it
+        - ${{ pin_compatible('ocaml-dune', lower_bound='x.x', upper_bound=None) }}
     tests:
       - package_contents:
           files:
